@@ -14,7 +14,7 @@ class Task(db.Model):
             "id": self.id,
             "title": self.title,
             "description": self.description,
-            "is_complete": self.is_complete
+            "is_complete": self.completed_at is not None
         }
         if self.completed_at is not None:
             response["completed_at"] = self.completed_at
