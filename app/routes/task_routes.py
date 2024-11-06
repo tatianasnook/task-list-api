@@ -2,6 +2,8 @@ from flask import Blueprint, request, abort, make_response, Response
 from app.models.task import Task
 from app.db import db
 from datetime import datetime
+import os
+import requests
 
 tasks_bp = Blueprint("task_bp", __name__, url_prefix="/tasks")
 
@@ -72,6 +74,19 @@ def mark_task_complete(task_id):
     task.completed_at = datetime.utcnow()
     db.session.commit()
 
+    url = "https://slack.com/api/chat.postMessage"
+    api_key = os.environ.get("SLACK_BOT_TOKEN")
+    headers = {"Authorization": f"Bearer {api_key}"}
+    request_body = {
+        "channel": "task-notifications",
+        "text": f"Task '{task.title}' has been completed!"
+    }
+
+    response = requests.post(url, headers=headers, data=request_body)
+
+    if response.status_code != 200:
+        return {"error": "Failed to send Slack notification"}, 500
+    
     return {"task": task.to_dict()}, 200
 
 
