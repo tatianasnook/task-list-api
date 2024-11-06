@@ -4,6 +4,7 @@ from app.db import db
 from datetime import datetime
 import os
 import requests
+from app.routes.route_utilities import validate_model
 
 tasks_bp = Blueprint("task_bp", __name__, url_prefix="/tasks")
 
@@ -48,13 +49,13 @@ def get_all_tasks():
 @tasks_bp.get("/<task_id>")
 def get_single_task(task_id):
 
-    task = validate_task(task_id)
+    task = validate_model(Task, task_id)
 
     return {"task": task.to_dict()}
 
 @tasks_bp.put("/<task_id>")
 def update_task(task_id):
-    task = validate_task(task_id)
+    task = validate_model(Task, task_id)
     request_body = request.get_json()
 
     task.title = request_body["title"]
@@ -69,7 +70,7 @@ def update_task(task_id):
 
 @tasks_bp.patch("/<task_id>/mark_complete")
 def mark_task_complete(task_id):
-    task = validate_task(task_id)
+    task = validate_model(Task, task_id)
 
     task.completed_at = datetime.utcnow()
     db.session.commit()
@@ -92,7 +93,7 @@ def mark_task_complete(task_id):
 
 @tasks_bp.patch("<task_id>/mark_incomplete")
 def mark_task_incomplete(task_id):
-    task = validate_task(task_id)
+    task = validate_model(Task, task_id)
 
     task.completed_at = None
     db.session.commit()
@@ -102,7 +103,7 @@ def mark_task_incomplete(task_id):
 
 @tasks_bp.delete("/<task_id>")
 def delete_task(task_id):
-    task = validate_task(task_id)
+    task = validate_model(Task, task_id)
 
     db.session.delete(task)
     db.session.commit()
@@ -110,18 +111,3 @@ def delete_task(task_id):
     return {"details": f'Task {task_id} "Go on my daily walk 🏞" successfully deleted'}
 
 
-def validate_task(task_id):
-    try:
-        task_id = int(task_id)
-    except:
-        response = {"message": f"Task id {task_id} invalid"}
-        abort(make_response(response, 400))
-
-    query = db.select(Task).where(Task.id == task_id)
-    task = db.session.scalar(query)
-    
-    if not task:
-        response = {"message": f"Task {task_id} not found"}
-        abort(make_response(response, 404))
-
-    return task
