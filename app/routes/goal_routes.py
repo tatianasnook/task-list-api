@@ -1,5 +1,6 @@
-from flask import Blueprint, request, Response
+from flask import Blueprint, request, abort, make_response
 from app.models.goal import Goal
+from app.models.task import Task
 from app.db import db
 from app.routes.route_utilities import validate_model
 
@@ -55,3 +56,55 @@ def delete_task(goal_id):
     db.session.commit()
 
     return {"details": f'Goal {goal_id} "Build a habit of going outside daily" successfully deleted'}
+
+
+@bp.post("/<goal_id>/tasks")
+def post_tasks_ids_to_goal(goal_id):
+    goal = validate_model(Goal, goal_id)
+    request_body = request.get_json()
+    task_ids = request_body.get("task_ids", [])
+
+    if not task_ids:
+        response = {"message": "Invalid request: missing task_ids"}
+        abort(make_response(response, 400))
+
+    tasks_to_add = []
+    for task_id in task_ids:
+        task = validate_model(Task, task_id)
+
+        if task not in goal.tasks:
+            tasks_to_add.append(task)
+
+    if tasks_to_add:
+        goal.tasks.extend(tasks_to_add)
+        try:
+            db.session.add(goal)
+            db.session.commit()
+        except Exception as e:
+            response = {
+                "message": f"Failed to update goal with tasks: {str(e)}"}
+            abort(make_response(response, 500))
+
+    return {"id": goal.id, "task_ids": task_ids}, 200
+
+
+@bp.get("/<goal_id>/tasks")
+def get_tasks_for_specific_goal(goal_id):
+    goal = validate_model(Goal, goal_id)
+
+    response = {
+        "id": goal.id,
+        "title": goal.title,
+        "tasks": [
+            {
+                "id": task.id,
+                "goal_id": goal.id,  
+                "title": task.title,
+                "description": task.description,
+                "is_complete": task.completed_at is not None
+            }
+            for task in goal.tasks
+        ]
+    }
+
+    return response, 200

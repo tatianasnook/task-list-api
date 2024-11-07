@@ -45,13 +45,13 @@ def get_all_tasks():
 
     return tasks_response
 
-
 @tasks_bp.get("/<task_id>")
 def get_single_task(task_id):
-
     task = validate_model(Task, task_id)
 
-    return {"task": task.to_dict()}
+    include_goal_id = task.goal_id is not None
+    return {"task": task.to_dict(include_goal_id=include_goal_id)}
+
 
 @tasks_bp.put("/<task_id>")
 def update_task(task_id):
@@ -109,5 +109,3 @@ def delete_task(task_id):
     db.session.commit()
 
     return {"details": f'Task {task_id} "Go on my daily walk 🏞" successfully deleted'}
-
-
