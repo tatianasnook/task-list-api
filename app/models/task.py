@@ -20,7 +20,7 @@ class Task(db.Model):
             "description": self.description,
             "is_complete": self.completed_at is not None,
         }
-        if include_goal_id:
+        if include_goal_id and self.goal_id is not None:
             response["goal_id"] = self.goal_id
         return response
 
